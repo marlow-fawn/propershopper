@@ -52,15 +52,15 @@ class BoxRegion:
         """
         closest_x = point[0]
         if point[0] < self.box['westmost']:
-            closest_x = self.box['westmost']
+            closest_x = self.box['westmost'] + STEP
         elif point[0] > self.box['eastmost']:
-            closest_x = self.box['eastmost']
+            closest_x = self.box['eastmost'] - STEP
 
         closest_y = point[1]
         if point[1] < self.box['northmost']:
-            closest_y = self.box['northmost']
+            closest_y = self.box['northmost'] + STEP
         elif point[1] > self.box['southmost']:
-            closest_y = self.box['southmost']
+            closest_y = self.box['southmost'] - STEP
 
         return closest_x, closest_y
 
@@ -96,7 +96,7 @@ SW_corner = BoxRegion(
     box = {
         'westmost':-0.6,
         'eastmost':3.25,
-        'northmost':3.5,
+        'northmost':12.0,
         'southmost':25.0
     }
 )

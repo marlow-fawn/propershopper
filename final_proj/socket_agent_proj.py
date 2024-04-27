@@ -76,6 +76,7 @@ class Agent:
         for item, quant in zip(env['observation']['players'][self.agent_id]['shopping_list'], self.list_quant):
             self.shopping_list += [item] * quant
         self.goal = ""
+        self.goal_status = None # mainly for navigation and replanning
         self.done = False
         self.container_id = -1
         self.container_type = ''
@@ -147,6 +148,7 @@ class Agent:
             self.execute('INTERACT')
             self.update_container('cart')
         self.goal = ""
+        self.goal_status = 'success' if self.holding_container else 'failure'
 
     def strategically_choose_from_shopping_list(self, shopping_list):
         """Strategically choose an item from the shopping list
@@ -234,12 +236,23 @@ class Agent:
                 self.reactive_nav(goal=box_region, align_x_first=True, is_box=True) # to navigate to a walkway, align x first
             else:
                 self.reactive_nav(goal=box_region, align_x_first=False, is_box=True) # to navigate to any other region, align y first
-        
+
+            if self.goal_status == 'failure': # didn't get to goal
+                self.transition()
+                return # let the transition method replan
+
         # we should now be in the same region as the goal (x, y) location
         if is_item:
             self.reactive_nav(goal=interact_box, align_x_first=True, is_box=True)
         else:
             self.reactive_nav(goal=goal, align_x_first=True, is_box=False)
+        
+        if self.goal_status == 'failure': # didn't get to goal
+            self.transition()
+            return # replan
+        
+        self.goal_status = 'success'
+        return
 
     
     def interact_box_to_goal_location(self, box:dict) -> tuple[float, float]:
@@ -340,13 +353,13 @@ class Agent:
                 player['curr_basket'] = self.container_id # a hack. curr_basket isn't reflected in the env unlike curr_cart
             while project_collision(player, self.env, command, dist=STEP):
                 command = Direction(self._ninety_degrees(dir=command)) # take the 90 degrees action instead
-                # TODO: not sure how to deal with cases where the goal location becomes occupied forever
                 stuck += 1
                 
-                if stuck >= 30: # been stuck for eternity, 
+                if stuck >= 200: # been stuck for eternity, 
                     #TODO: maybe call an A* with stepsize=0.15 to find a plan out of it?
-                    pass
-                if stuck >= 20:#been stuck for too long, it's probably a static corner some other agent created, F it, try a random action 
+                    self.goal_status = 'failure'
+                    return # let the goto method replan
+                elif stuck >= 20:#been stuck for too long, it's probably a static corner some other agent created, F it, try a random action 
                     command = random.choice([dir for dir in Direction if (dir != Direction.NONE and dir != original_command)])
                     if not project_collision(player, self.env, command, dist=STEP):
                         stuck = 0
