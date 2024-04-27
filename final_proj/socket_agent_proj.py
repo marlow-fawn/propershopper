@@ -316,6 +316,9 @@ class Agent:
                     target = "x"
                     continue
             original_command = command
+
+            if self.holding_container and self.container_type == 'basket':
+                player['curr_basket'] = self.container_id # a hack
             while project_collision(player, self.env, command, dist=STEP):
                 command = Direction(self._ninety_degrees(dir=command)) # take the 90 degrees action instead
                 # TODO: can't get unstuck yet
