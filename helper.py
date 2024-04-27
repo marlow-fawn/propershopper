@@ -122,6 +122,8 @@ def project_collision(obj:dict|list|tuple, state, direction: Direction, dist=0.4
     elif direction == Direction.WEST:
         obj_copy['position'][0] -= dist
         if obj_copy['position'][0] < 0.55:
+            if abs(obj_copy['position'][1] - exit_pos[1]) < STEP: # at the exit
+                return False
             return True
 
     for key, value in state['observation'].items():

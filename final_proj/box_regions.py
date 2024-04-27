@@ -1,3 +1,4 @@
+import random
 from util import *
 # from functools import total_ordering
 
@@ -38,7 +39,39 @@ class BoxRegion:
         Returns:
             bool: T for in region
         """
-        return (self.box['westmost'] <= point[0] <= self.box['eastmost']) and (self.box['northmost'] <= point[1] <= self.box['southmost'])
+        return loc_in_box(box=self.box, loc=point)
+    
+    def closest(self, point:list|tuple[float, float]) -> tuple|list[float, float]:
+        """Return the closest point in the BoxRegion to the given point
+
+        Args:
+            point (list | tuple[float, float]): (x, y)
+
+        Returns:
+            tuple|list[float, float]: closest point to (x, y) in region
+        """
+        closest_x = point[0]
+        if point[0] < self.box['westmost']:
+            closest_x = self.box['westmost']
+        elif point[0] > self.box['eastmost']:
+            closest_x = self.box['eastmost']
+
+        closest_y = point[1]
+        if point[1] < self.box['northmost']:
+            closest_y = self.box['northmost']
+        elif point[1] > self.box['southmost']:
+            closest_y = self.box['southmost']
+
+        return closest_x, closest_y
+
+    def empty_location(self, width:float, height:float, obs:dict):
+        """Provide an unoccupied location inside this BoxRegion that's
+        Args:
+            width (float): the desired width of the unoccupied region
+            height (float): the desired height of the unoccupied region
+        """
+        pass
+
 
 NW_corner = BoxRegion(
     name = "NW_corner",
@@ -64,7 +97,7 @@ SW_corner = BoxRegion(
         'westmost':-0.6,
         'eastmost':3.25,
         'northmost':3.5,
-        'southmost':21.5
+        'southmost':25.0
     }
 )
 NE_corner = BoxRegion(

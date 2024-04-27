@@ -196,7 +196,7 @@ def can_interact_player(player, place_obj) -> bool:
             return True
     return False
 
-def loc_in_interact_box(box, loc) -> bool:
+def loc_in_box(box, loc) -> bool:
     return (
         box['northmost'] <= loc[1] <= box['southmost'] and box['westmost'] <= loc[0] <= box['eastmost']
     )
@@ -207,6 +207,7 @@ def x_in_interact_box(box, x) -> bool:
     )
 
 def y_in_interact_box(box, y) -> bool:
+    
     return (
        box['northmost'] <= y <= box['southmost']
     )

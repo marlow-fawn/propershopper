@@ -113,12 +113,12 @@ class Agent:
         """
         print(f"Agent {self.agent_id} going to {self.goal}")
         #TODO:go to the item and get it. Look at the implementation of `get_container` for reference. target item in stored self.goal
-        #change goal after getting item.
         self.holding_food = self.env['observation']['players'][self.agent_id]['holding_food']
         if self.holding_food is not None:
             self.holding_container = False #sanity check: can't hold both food and container
         if self.holding_food == self.goal:# successfully got item
             self.goal = "add_to_container" # add item to container
+        # TODO: if holding the wrong food, put it back
     
     # Agent retrieves a container
     def get_container(self):
@@ -194,7 +194,7 @@ class Agent:
 
         if is_item:#goal is an item in the env, not a (x, y)
             populate_locs(self.env['observation'])
-            if goal in ('cartReturn 0', 'cartReturn 1', 'basketReturn 0'): # access these from the North
+            if goal in ('cartReturn 0', 'cartReturn 1', 'basketReturn 0', 'register 0'): # access these from the North
                 interact_box = locs[goal]['interact_boxes']['NORTH_BOX']
                 goal = self.interact_box_to_goal_location(box=interact_box)
             elif goal in ('cart', 'basket'):
@@ -231,9 +231,9 @@ class Agent:
         
         for box_region in path:
             if box_region.name == "W_walkway" or box_region.name == "E_walkway":
-                self.reactive_nav(goal=box_region.midpoint, align_x_first=True, is_box=False) # to navigate to a walkway, align x first
+                self.reactive_nav(goal=box_region, align_x_first=True, is_box=True) # to navigate to a walkway, align x first
             else:
-                self.reactive_nav(goal=box_region.midpoint, align_x_first=False, is_box=False) # to navigate to any other region from a walkway, align y first
+                self.reactive_nav(goal=box_region, align_x_first=False, is_box=True) # to navigate to any other region, align y first
         
         # we should now be in the same region as the goal (x, y) location
         if is_item:
@@ -285,11 +285,18 @@ class Agent:
             player = self.env['observation']['players'][self.agent_id]
 
             if is_box:
-                goal_loc = self.interact_box_to_goal_location(box=goal)
-                x_dist = player['position'][0] - goal_loc[0]
-                y_dist = player['position'][1] - goal_loc[1]
-                if can_interact_in_box(player=player, interact_box=goal):
-                    break
+                if isinstance(goal, BoxRegion):# it's a box region
+                    if goal.contains(player['position']):
+                        break
+                    goal_loc = goal.closest(point=player['position'])
+                    x_dist = player['position'][0] - goal_loc[0]
+                    y_dist = player['position'][1] - goal_loc[1]
+                else: # it's an interaction box
+                    goal_loc = self.interact_box_to_goal_location(box=goal)
+                    x_dist = player['position'][0] - goal_loc[0]
+                    y_dist = player['position'][1] - goal_loc[1]
+                    if can_interact_in_box(player=player, interact_box=goal):
+                        break
             else:
                 x_dist = player['position'][0] - goal[0]
                 y_dist = player['position'][1] - goal[1]
@@ -301,10 +308,13 @@ class Agent:
             if reached_x and reached_y:
                 if not is_box:
                     break
-                else: # it's an interact box, we have to face the right direction
-                    self.execute(goal['player_needs_to_face'].name)
-                    reached_x = False # reset because we could have moved due to stochasticity
-                    reached_y = False # reset because we could have moved due to stochasticity
+                else: 
+                    if not isinstance(goal, BoxRegion): # it's an interact box, we have to face the right direction
+                        self.execute(goal['player_needs_to_face'].name)
+                        reached_x = False # reset because we could have moved due to stochasticity
+                        reached_y = False # reset because we could have moved due to stochasticity
+                    else:
+                        break
 
             if target == "x":
                 if x_dist < -STEP:
@@ -327,17 +337,20 @@ class Agent:
             original_command = command
 
             if self.holding_container and self.container_type == 'basket':
-                player['curr_basket'] = self.container_id # a hack
+                player['curr_basket'] = self.container_id # a hack. curr_basket isn't reflected in the env unlike curr_cart
             while project_collision(player, self.env, command, dist=STEP):
                 command = Direction(self._ninety_degrees(dir=command)) # take the 90 degrees action instead
-                # TODO: not sure how to deal with cases where the goal location becomes occupied
+                # TODO: not sure how to deal with cases where the goal location becomes occupied forever
                 stuck += 1
                 
-                if stuck >= 20:#been stuck for too long, it's probably a static corner some other agent created, F it, take the 270 degree action
+                if stuck >= 30: # been stuck for eternity, 
+                    #TODO: maybe call an A* with stepsize=0.15 to find a plan out of it?
+                    pass
+                if stuck >= 20:#been stuck for too long, it's probably a static corner some other agent created, F it, try a random action 
                     command = random.choice([dir for dir in Direction if (dir != Direction.NONE and dir != original_command)])
                     if not project_collision(player, self.env, command, dist=STEP):
                         stuck = 0
-                        # try switching alignment target
+                        # once no longer stuck, try switching alignment target to avoid walking back into the corner
                         if target == "x":
                             target = "y"
                         else:
@@ -418,31 +431,25 @@ class Agent:
             elif player_y > goal_y and abs(player_y - goal_y) >= LOCATION_TOLERANCE:#player should go NORTH
                 #self.execute(Direction.NORTH.name)
                 self.reactive_nav(goal=step_location, is_box=False)
-        
-        # def infer_actual_action(player_state_before_execution:tuple[float, float, Direction], player_state_after_execution:tuple[float, float, Direction]):
-        #     prev_x, prev_y, prev_orientation = player_state_before_execution
-        #     after_x, after_y, after_orientation = player_state_after_execution
-        #     if after_orientation != prev_orientation:#player turned
-        #         return after_orientation
-        #     elif prev_x < after_x:#player went EAST
-        #         return Direction.EAST
-            
 
     # TODO: Agent picks up an item and adds it to the cart
     def add_to_container(self):
         print(f"Agent {self.agent_id} adding an item to the {self.container_type}")
 
-        pass  # TODO
+        # TODO: check if we are already holding a food, if so, get to our container and add it to container
+        # TODO: check if food is in container. 
 
+        # If so, remove it from list
+        self.shopping_list.remove(self.holding_food) 
         self.goal = ""
 
     # TODO use other functions to complete checkout
     def exit(self):
         print(f"Agent {self.agent_id} exiting")
-        self.goto(goal='register 0', is_item=True)
+        self.goto(goal='register 1', is_item=True)
 
         
-        self.goto([-0.6, 4], is_item=False)#upper exit
+        self.goto(exit_pos, is_item=False)#upper exit
 
         self.done = True
 
