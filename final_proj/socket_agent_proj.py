@@ -97,7 +97,6 @@ class Agent:
                 for _ in range(quantity):
                     self.goal = item  # Set our goal to the next item on our list
                     self.get_item()  # Go to our goal
-                    self.transition()
         elif self.goal == 'add_to_container':  # If we have a goal and we're here, that means we're at the goal!
             self.add_to_container()
         else: # this shouldn't happen, just exit
@@ -117,7 +116,7 @@ class Agent:
         if self.holding_food is not None:
             self.holding_container = False #sanity check: can't hold both food and container
         if self.holding_food == self.goal:# successfully got item
-            self.goal = "add_to_container"
+            self.goal = "add_to_container" # add item to container
     
     # Agent retrieves a container
     def get_container(self):
@@ -207,28 +206,31 @@ class Agent:
                 interact_box = locs[goal]['interact_boxes']['SOUTH_BOX']
                 goal = self.interact_box_to_goal_location(box=interact_box)
 
-        if self.holding_container and self.container_type == 'cart':
-            print(f"Agent {self.agent_id} going to location {goal} with cart")
+        if self.holding_container:
+            print(f"Agent {self.agent_id} going to location {goal} with {self.container_type}")
             path = []
             pass  # TODO: goto with cart. TA says it might be as simple as changing the player's shape as long as they are holding a cart and change it back once they are not. If it's too complicated we will skip it
         else:
             print(f"Agent {self.agent_id} planning a path to {goal} without cart")
             path = self.planner.astar(
                 player_id=self.agent_id,
-                start=self.env['observation']['players'][self.agent_id],
+                start=self.env['observation']['players'][self.agent_id]['position'],
                 goal=goal,
                 obs=self.env['observation']
             )
             print(f"Agent {self.agent_id} going to location {goal} without cart")
         
         for box_region in path:
-            self.reactive_nav(goal=box_region.midpoint, is_box=False)
+            if box_region.name == "W_walkway" or box_region.name == "E_walkway":
+                self.reactive_nav(goal=box_region.midpoint, align_x_first=True, is_box=False) # to navigate to a walkway, align x first
+            else:
+                self.reactive_nav(goal=box_region.midpoint, align_x_first=False, is_box=False) # to navigate to any other region from a walkway, align y first
         
         # we should now be in the same region as the goal (x, y) location
         if is_item:
-            self.reactive_nav(goal=interact_box, is_box=True)
+            self.reactive_nav(goal=interact_box, align_x_first=True, is_box=True)
         else:
-            self.reactive_nav(goal=goal, is_box=False)
+            self.reactive_nav(goal=goal, align_x_first=True, is_box=False)
 
     
     def interact_box_to_goal_location(self, box:dict) -> tuple[float, float]:
@@ -256,7 +258,7 @@ class Agent:
     
     
     
-    def reactive_nav(self, goal, is_box=False):
+    def reactive_nav(self, goal, align_x_first=False, is_box=False):
         """Purely reactie navigation
 
         Args:
@@ -265,17 +267,18 @@ class Agent:
         ##############################################
         ## The old reactive navigation code is below##
         ##############################################
-        target = "x"
+        target = "x" if align_x_first else "y" # have to align y first for navigation from one region to another
         reached_x = False
         reached_y = False
         stuck = 0 # stuck for timestep
+       
         while True:
             player = self.env['observation']['players'][self.agent_id]
 
             if is_box:
                 goal_loc = self.interact_box_to_goal_location(box=goal)
-                x_dist = player['position'][0] - goal_loc['westmost']
-                y_dist = player['position'][1] - goal_loc['northmost']
+                x_dist = player['position'][0] - goal_loc[0]
+                y_dist = player['position'][1] - goal_loc[1]
                 if can_interact_in_box(player=player, interact_box=goal):
                     break
             else:
@@ -287,7 +290,12 @@ class Agent:
             if abs(y_dist) < STEP:
                 reached_y = True
             if reached_x and reached_y:
-                break
+                if not is_box:
+                    break
+                else: # it's an interact box, we have to face the right direction
+                    self.execute(goal['player_needs_to_face'].name)
+                    reached_x = False # reset because we could have moved due to stochasticity
+                    reached_y = False # reset because we could have moved due to stochasticity
 
             if target == "x":
                 if x_dist < -STEP:
@@ -309,17 +317,28 @@ class Agent:
                     continue
             original_command = command
             while project_collision(player, self.env, command, dist=STEP):
-                command = Direction(self._turn_ninety_degrees(dir=command)) # take the 90 degrees action instead
+                command = Direction(self._ninety_degrees(dir=command)) # take the 90 degrees action instead
+                # TODO: can't get unstuck yet
                 stuck += 1
-                if stuck >= 10:#been stuck for too long, it's probably a corner, F it, take the 270 degree action
-                    command = self._turn_ninety_degrees(self._turn_opposite_dir(original_command))
+                
+                if stuck >= 10:#been stuck for too long, it's probably a static corner some other agent created, F it, take the 270 degree action
+                    command = random.choice([dir for dir in Direction if dir != Direction.NONE])
+                    if not project_collision(player, self.env, command, dist=STEP):
+                        stuck = 0
+                        # try switching alignment target
+                        target = "y" if target == "x" else "x"
+                        break
+                reached_x = False
+                reached_y = False
+            
+            
             if player['direction'] == command.value:
                 self.execute(action=command.name)# execute once if already facing that direction
-            else:
+            else: # execute twice if need to turn in that direction first
                 self.execute(action=command.name)
                 self.execute(action=command.name)
-
-    def _turn_opposite_dir(self, dir:Direction) -> Direction:
+  
+    def _opposite_dir(self, dir:Direction) -> Direction:
         """Turn 180 degrees with respect to the given 
 
         Args:
@@ -336,8 +355,8 @@ class Agent:
         else:
             return Direction.EAST
 
-    def _turn_ninety_degrees(self, dir:Direction) -> Direction:
-        """Turn 90 degrees clockwise with respect to the given 
+    def _ninety_degrees(self, dir:Direction) -> Direction:
+        """Find the command that's 90 degrees clockwise with respect to the given dir
 
         Args:
             command (Direction): the direction command whose ninety degree direction we want to find

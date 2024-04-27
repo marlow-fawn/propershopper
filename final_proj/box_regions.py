@@ -1,5 +1,7 @@
 from util import *
+# from functools import total_ordering
 
+# @total_ordering
 class BoxRegion:
     """Box Region class for fast high level A star"""
 
@@ -9,13 +11,21 @@ class BoxRegion:
         if box is None:
             self.midpoint = None
         else:
-            self.midpoint = (abs(box['westmost'] - box['eastmost']) / 2.0, abs(box['southmost'] - box['northmost']) / 2.0)
+            self.midpoint = (abs(box['westmost'] - box['eastmost']) / 2.0 + box['westmost'], abs(box['southmost'] - box['northmost']) / 2.0 + box['northmost'])
         self.box = box
-        self.neighbors = neighbors
+        self.neighbors = neighbors if neighbors else set()
 
 
     def __eq__(self, other):
-        return self.midpoint == other.midpoint
+        if isinstance(other, BoxRegion):
+            return self.midpoint == other.midpoint
+        return False
+    
+    def __hash__(self):
+        return hash(self.midpoint)
+
+    def __repr__(self):
+        return self.name
     
     def add_neighbors(self, neighbors):
         self.neighbors.update(neighbors)

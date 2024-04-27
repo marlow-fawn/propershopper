@@ -1,6 +1,7 @@
 
 import numpy as np
 import json
+import itertools
 from queue import PriorityQueue
 
 import json
@@ -202,35 +203,35 @@ class HighLevelPlanner:
         return self.normalized_manhattan_dist(start=box_region.midpoint, goal=goal)
 
     
-    def astar(self, player, start, goal, obs):
+    def astar(self, player_id, start, goal, obs):
         """Perform high level planning to find a path from start location to goal region."""
         start_region = self.which_region(start) # figure out which BoxRegion start is in
         frontier = PriorityQueue()
-        frontier.put(start_region, 0)
+        frontier.put((0, hash(start_region), start_region))
         came_from = {}
         cost_so_far = {}
-        came_from[start] = None
+        came_from[start_region] = None
         cost_so_far[start_region] = 0
 
    
         while not frontier.empty():
-            curr_region:BoxRegion = frontier.get()
+            _, _, curr_region = frontier.get()
             if curr_region.contains(goal):
                 break # found goal region
             for neighbor_region in curr_region.neighbors:
-                cost_to_neighbor = cost_so_far[curr_region] + 1 + calculate_crowdedness_factor(player, neighbor_region, obs)
+                cost_to_neighbor = cost_so_far[curr_region] + 1 + calculate_crowdedness_factor(player_id, neighbor_region.box, obs)
                 if neighbor_region not in cost_so_far or cost_so_far[neighbor_region] > cost_to_neighbor:
                     cost_so_far[neighbor_region] = cost_to_neighbor
                     priority = cost_to_neighbor + self.heuristic(neighbor_region, goal)
-                    frontier.put(neighbor_region, priority)
+                    frontier.put((priority, hash(neighbor_region), neighbor_region))
                     came_from[neighbor_region] = curr_region
             
         # Reconstruct path
         path = []
-        while current:
-            path.append(current)
-            current = came_from[current]
-            if current == start_region:
+        while curr_region:
+            path.append(curr_region)
+            curr_region = came_from[curr_region]
+            if curr_region == start_region:
                 break
         path.reverse()
         return path
