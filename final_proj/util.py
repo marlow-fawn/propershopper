@@ -66,7 +66,7 @@ def calculate_crowdedness_factor(player_id:int, box:dict, observation:dict) -> f
             continue
         if obj_overlap_with_box(b, box):
             occupied_area += b['width'] * b['height']
-    return 1.0 - (occupied_area / area)
+    return occupied_area / area
     
     # divide number of players by area of the box region
     return player_count / (abs(box['westmost'] - box['eastmost']) * abs(box['northmost'] - box['southmost']))

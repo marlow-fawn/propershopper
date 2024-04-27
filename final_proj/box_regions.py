@@ -191,7 +191,7 @@ E_corner.add_neighbors(neighbors=[E_walkway])
 SE_corner.add_neighbors(neighbors=[E_walkway])
 
 regions = [
-    NE_corner,
+    NW_corner,
     W_corner,
     SW_corner,
     NE_corner,

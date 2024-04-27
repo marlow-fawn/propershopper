@@ -125,10 +125,10 @@ def project_collision(obj:dict|list|tuple, state, direction: Direction, dist=0.4
             return True
 
     for key, value in state['observation'].items():
-        for item in value:
+        for i, item in enumerate(value):
             if key == 'players':#for players, pretend that they are wider and taller than they actually are to stay away
                 if (overlap(obj_copy['position'][0], obj_copy['position'][1], obj_copy['width'], obj_copy['height'],
-                            item['position'][0], item['position'][1], item['width'] + buffer + 1.0, item['height'] + buffer + 1.0)):
+                            item['position'][0], item['position'][1], item['width'] + buffer + 2 * STEP, item['height'] + buffer + 2 * STEP)):
                     if not (obj_copy == item or (
                         'index' in item.keys() and 'index' in obj_copy.keys() and item['index'] == obj_copy['index'])):
                     
@@ -136,12 +136,11 @@ def project_collision(obj:dict|list|tuple, state, direction: Direction, dist=0.4
                         return True
             else:
                 if key == 'carts':
-                    if 'curr_cart' in obj_copy and item['index'] == obj_copy['curr_cart']:
+                    if 'curr_cart' in obj_copy and i == obj_copy['curr_cart']:
                         continue # don't project collision with the cart we are currently holding
-                if key == 'basket':
-                    if 'curr_basket' in obj_copy and item['index'] == obj_copy['curr_basket']:
+                if key == 'baskets':
+                    if 'curr_basket' in obj_copy and i == obj_copy['curr_basket']:
                         continue # don't project collision with the basket we are currently holding
-                    
                 if (overlap(obj_copy['position'][0], obj_copy['position'][1], obj_copy['width'], obj_copy['height'],
                             item['position'][0], item['position'][1], item['width'] + buffer, item['height'] + buffer)):
                     if not (obj_copy == item or (

@@ -71,8 +71,10 @@ class Agent:
         self.socket = conn
         self.agent_id = agent_id
         self.env = env
+        self.shopping_list = []
         self.list_quant:list = env['observation']['players'][self.agent_id]['list_quant']
-        self.shopping_list:list[tuple] = [(item, quant) for item, quant in zip(env['observation']['players'][self.agent_id]['shopping_list'], self.list_quant)]
+        for item, quant in zip(env['observation']['players'][self.agent_id]['shopping_list'], self.list_quant):
+            self.shopping_list += [item] * quant
         self.goal = ""
         self.done = False
         self.container_id = -1
@@ -93,10 +95,10 @@ class Agent:
             if not self.shopping_list:  # Check if there's anything left on our list
                 self.exit()  # Leave the store (includes checkout), might need to return basket
             else:  # We've still got something on our shopping list
-                item, quantity = self.strategically_choose_from_shopping_list(self.shopping_list)
-                for _ in range(quantity):
-                    self.goal = item  # Set our goal to the next item on our list
-                    self.get_item()  # Go to our goal
+                item = self.strategically_choose_from_shopping_list(self.shopping_list)
+               
+                self.goal = item  # Set our goal to the next item on our list
+                self.get_item()  # Go to our goal
         elif self.goal == 'add_to_container':  # If we have a goal and we're here, that means we're at the goal!
             self.add_to_container()
         else: # this shouldn't happen, just exit
@@ -152,8 +154,15 @@ class Agent:
         Args:
             shopping_list (list[tuple]): shopping list of (item, quantity)
         """
-        #TODO: replace with optimization strategy
-        return shopping_list.pop(0)
+        #pick the least crowded
+        min_crowdedness = 1.0
+        self.execute("NOP")
+        for item in shopping_list:
+            crowdedness = calculate_crowdedness_factor(self.agent_id, locs[item]['interact_boxes']['SOUTH_BOX'], self.env['observation'])
+            if crowdedness <= min_crowdedness:
+                best = item
+                min_crowdedness = crowdedness
+        return best
     
     def update_container(self, container='basket'):
         """Check if we are responsible for any `container` and update container related status. Either a cart or a basket
@@ -321,15 +330,18 @@ class Agent:
                 player['curr_basket'] = self.container_id # a hack
             while project_collision(player, self.env, command, dist=STEP):
                 command = Direction(self._ninety_degrees(dir=command)) # take the 90 degrees action instead
-                # TODO: can't get unstuck yet
+                # TODO: not sure how to deal with cases where the goal location becomes occupied
                 stuck += 1
                 
-                if stuck >= 10:#been stuck for too long, it's probably a static corner some other agent created, F it, take the 270 degree action
-                    command = random.choice([dir for dir in Direction if dir != Direction.NONE])
+                if stuck >= 20:#been stuck for too long, it's probably a static corner some other agent created, F it, take the 270 degree action
+                    command = random.choice([dir for dir in Direction if (dir != Direction.NONE and dir != original_command)])
                     if not project_collision(player, self.env, command, dist=STEP):
                         stuck = 0
                         # try switching alignment target
-                        target = "y" if target == "x" else "x"
+                        if target == "x":
+                            target = "y"
+                        else:
+                            target = "x"
                         break
                 reached_x = False
                 reached_y = False
@@ -430,7 +442,7 @@ class Agent:
         self.goto(goal='register 0', is_item=True)
 
         
-        self.goto([-0.6, 3.0], is_item=False)#upper exit
+        self.goto([-0.6, 4], is_item=False)#upper exit
 
         self.done = True
 
