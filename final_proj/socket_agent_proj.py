@@ -88,22 +88,28 @@ class Agent:
     def transition(self):
         self.execute(action='NOP') # this updates self.env
         if self.done:  # If we've left the store
+            self.goal_status = 'pending'
             self.execute("NOP")  # Do nothing
 
         elif self.container_id == -1:  # If we don't have a container
+            self.goal_status = 'pending'
             self.get_container()  # Get one!
 
         elif self.goal == "":  # If we currently don't have a goal
             if not self.shopping_list:  # Check if there's anything left on our list
+                self.goal_status = 'pending'
                 self.exit()  # Leave the store (includes checkout), might need to return basket
             else:  # We've still got something on our shopping list
                 item = self.strategically_choose_from_shopping_list(self.shopping_list)
                
                 self.goal = item  # Set our goal to the next item on our list
+                self.goal_status = 'pending'
                 self.get_item()  # Go to our goal
         elif self.goal == 'add_to_container':  # If we have a goal and we're here, that means we're at the goal!
+            self.goal_status = 'pending'
             self.add_to_container()
         else: # this shouldn't happen, just exit
+            self.goal_status = 'pending'
             self.exit()
 
     
@@ -119,8 +125,10 @@ class Agent:
         if self.holding_food is not None:
             self.holding_container = False #sanity check: can't hold both food and container
         if self.holding_food == self.goal:# successfully got item
+            self.goal_status = 'success'
             self.goal = "add_to_container" # add item to container
-        # TODO: if holding the wrong food, put it back
+        # TODO: if holding the wrong food, put it back, update
+       
     
     # Agent retrieves a container
     def get_container(self):
