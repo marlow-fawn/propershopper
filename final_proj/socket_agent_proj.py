@@ -91,7 +91,7 @@ class Agent:
             self.goal_status = 'pending'
             self.execute("NOP")  # Do nothing
 
-        elif self.container_id == -1:  # If we don't have a container
+        elif self.container_id == -1 or self.goal == 'cart' or self.goal == 'basket':  # If we don't have a container
             self.goal_status = 'pending'
             self.get_container()  # Get one!
 
@@ -105,7 +105,7 @@ class Agent:
                 self.goal = item  # Set our goal to the next item on our list
                 self.goal_status = 'pending'
                 self.get_item()  # Go to our goal
-        elif self.goal == 'add_to_container':  # If we have a goal and we're here, that means we're at the goal!
+        elif self.goal == 'add_to_container':
             self.goal_status = 'pending'
             self.add_to_container()
         else: # this shouldn't happen, just exit
@@ -114,7 +114,7 @@ class Agent:
 
     
     def get_item(self):
-        """get `quantitiy` number of `item`
+        """get item
 
         Args:
             item (str): an item on the shopping list
@@ -141,8 +141,7 @@ class Agent:
             else:
                 self.goal = 'basket'# we have gotten a basket before, it's somewhere in the environment
                 self.goto(goal=f'basket {self.container_id}', is_item=True)
-            self.execute('INTERACT')
-            self.execute('INTERACT')
+            self.execute('TOGGLE_CART')
             self.update_container('basket')
             self.holding_container = True #we have to make this assumption, it's not reflected in the env
         else:
@@ -153,8 +152,7 @@ class Agent:
             else:
                 self.goal = 'cart'
                 self.goto(goal=f'cart {self.container_id}', is_item=True)
-            self.execute('INTERACT')
-            self.execute('INTERACT')
+            self.execute('TOGGLE_CART')
             self.update_container('cart')
         self.goal = ""
         self.goal_status = 'success' if self.holding_container else 'failure'
@@ -454,16 +452,34 @@ class Agent:
                 #self.execute(Direction.NORTH.name)
                 self.reactive_nav(goal=step_location, is_box=False)
 
-    # TODO: Agent picks up an item and adds it to the cart
+    # Agent picks up an item and adds it to the cart
     def add_to_container(self):
         print(f"Agent {self.agent_id} adding an item to the {self.container_type}")
-
-        # TODO: check if we are already holding a food, if so, get to our container and add it to container
-        # TODO: check if food is in container. 
-
-        # If so, remove it from list
-        self.shopping_list.remove(self.holding_food) 
-        self.goal = ""
+        if self.holding_food and self.container_id == -1: # we have never gotten a container but we are holding a food
+            self.goal = 'put_back_food'
+            self.goal_status = 'failure'
+            return
+            
+        if self.holding_food is None or self.container_id == -1: # we are not holding a food or we don't have a container
+            self.goal_status = 'failure'
+            self.goal = ''
+            return
+        
+        self.goto(goal=f"{self.container_type} {self.container_id}") # we are holding food and we have a container, go to our container
+        # take a look at the contents of the container before we try to put the food in
+        num_contents = len(self.env['observation'][self.container_type][self.container_id]['contents'])
+        self.execute('INTERACT') # put food in container
+        # check if we successfully put the item into the container
+        if len(self.env['observation'][self.container_type][self.container_id]['contents']) > num_contents:
+            self.holding_food = None
+            self.goal_status = 'success'
+            # remove item from list
+            self.shopping_list.remove(self.holding_food) 
+            self.goal = ""
+            return
+        else:
+            self.goal_status = 'failure'
+            return
 
     # TODO use other functions to complete checkout
     def exit(self):
