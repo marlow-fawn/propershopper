@@ -481,12 +481,19 @@ class Agent:
             self.goal_status = 'failure'
             return
 
-    # TODO use other functions to complete checkout
+    # goes to the register, checks out, and leaves
+    # assumes that the agent is holding a cart or basket
     def exit(self):
         print(f"Agent {self.agent_id} exiting")
         self.goto(goal='register 1', is_item=True)
 
-        
+        action_arr = ["EAST", "TOGGLE_CART", "NORTH", "NORTH",
+                      "INTERACT", "INTERACT", "SOUTH", "SOUTH",
+                      "EAST", "TOGGLE_CART"]
+        for a in action_arr:
+            self.execute(a)
+
+        exit_pos = [-0.8, 15.6]
         self.goto(exit_pos, is_item=False)#upper exit
 
         self.done = True
