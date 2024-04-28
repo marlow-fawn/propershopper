@@ -108,6 +108,9 @@ class Agent:
         elif self.goal == 'add_to_container':
             self.goal_status = 'pending'
             self.add_to_container()
+        elif self.goal == 'put_back_food':
+            self.goal_status = 'pending'
+            self.put_back_food()
         else: # this shouldn't happen, just exit
             self.goal_status = 'pending'
             self.exit()
@@ -119,16 +122,60 @@ class Agent:
         Args:
             item (str): an item on the shopping list
         """
-        print(f"Agent {self.agent_id} going to {self.goal}")
-        #TODO:go to the item and get it. Look at the implementation of `get_container` for reference. target item in stored self.goal
+        # precondition check
+        if not self.holding_container:# must be holding a container
+            self.goal_status = 'failure'
+            self.goal = self.container_type # otherwise change goal to get container first
+            return 
+        
+        print(f"Agent {self.agent_id} going to {self.goal} with {self.container_type}")
+        # go to the item and get it. Look at the implementation of `get_container` for reference. target item is stored in self.goal
+        self.goto(self.goal) # go to food item
+        self.execute('TOGGLE_CART') # let go of container
+        self.goto(self.goal) # go face the food item
+        self.execute('INTERACT')
+        self.execute('INTERACT')
+        # set postconditions
         self.holding_food = self.env['observation']['players'][self.agent_id]['holding_food']
         if self.holding_food is not None:
-            self.holding_container = False #sanity check: can't hold both food and container
+            self.holding_container = False # sanity check: can't hold both food and container
         if self.holding_food == self.goal:# successfully got item
             self.goal_status = 'success'
             self.goal = "add_to_container" # add item to container
-        # TODO: if holding the wrong food, put it back, update
-       
+            return
+        elif self.holding_food is None: # we didn't get the food
+            self.goal_status = 'failure'
+            return
+        elif self.holding_food != self.goal: # we got the wrong food
+            self.goal_status = 'failure'
+            self.goal = 'put_back_food'
+            return
+    
+
+    def put_back_food(self):
+        """Put the food we are holding back on its shelf. Used when accidentally grabbed the wrong food
+
+        Returns:
+            None
+        """
+        # preconditions check
+        if self.holding_food is None: # not holding anything
+            self.goal_status = 'success'
+            return
+        
+        self.goto(goal=self.holding_food) # go to the shelf for the food we are holding
+        self.execute('INTERACT') # interact with the shelf to put the food back
+
+        # postconditions check
+        if self.holding_food is None: # no longer holding food
+            self.goal_status = 'success'
+            self.goal = ''
+            return
+        else:
+            self.goal_status = 'failure'
+            self.goal = 'put_back_food'
+            return
+
     
     # Agent retrieves a container
     def get_container(self):
@@ -138,21 +185,26 @@ class Agent:
             if self.container_id == -1: # has never gotten a container
                 self.goal = 'basketReturn 0'
                 self.goto(goal='basketReturn 0', is_item=True)
+                self.execute('INTERACT')
+                self.execute('INTERACT')
             else:
                 self.goal = 'basket'# we have gotten a basket before, it's somewhere in the environment
                 self.goto(goal=f'basket {self.container_id}', is_item=True)
-            self.execute('TOGGLE_CART')
+                self.execute('TOGGLE_CART')
             self.update_container('basket')
             self.holding_container = True #we have to make this assumption, it's not reflected in the env
         else:
             print(f"Agent {self.agent_id} getting a cart")
             self.update_container(container='cart')
             if self.container_id == -1: # has never gotten a container
+                self.goal = 'cartReturn 0'
                 self.goto(goal='cartReturn 0', is_item=True)
+                self.execute('INTERACT')
+                self.execute('INTERACT')
             else:
                 self.goal = 'cart'
                 self.goto(goal=f'cart {self.container_id}', is_item=True)
-            self.execute('TOGGLE_CART')
+                self.execute('TOGGLE_CART')
             self.update_container('cart')
         self.goal = ""
         self.goal_status = 'success' if self.holding_container else 'failure'
@@ -161,14 +213,14 @@ class Agent:
         """Strategically choose an item from the shopping list
 
         Args:
-            shopping_list (list[tuple]): shopping list of (item, quantity)
+            shopping_list (list): shopping list
         """
-        #pick the least crowded
+        # pick the least crowded
         min_crowdedness = 1.0
-        self.execute("NOP")
+        self.execute("NOP") # make sure to observe where other players are for crowdedness calculations
         for item in shopping_list:
             crowdedness = calculate_crowdedness_factor(self.agent_id, locs[item]['interact_boxes']['SOUTH_BOX'], self.env['observation'])
-            if crowdedness <= min_crowdedness:
+            if crowdedness < min_crowdedness:
                 best = item
                 min_crowdedness = crowdedness
         return best
@@ -203,7 +255,7 @@ class Agent:
 
         if is_item:#goal is an item in the env, not a (x, y)
             populate_locs(self.env['observation'])
-            if goal in ('cartReturn 0', 'cartReturn 1', 'basketReturn 0', 'register 0'): # access these from the North
+            if goal in ('cartReturn 0', 'cartReturn 1', 'basketReturn 0', 'register 0', 'register 1'): # access these from the North
                 interact_box = locs[goal]['interact_boxes']['NORTH_BOX']
                 goal = self.interact_box_to_goal_location(box=interact_box)
             elif goal in ('cart', 'basket'):
@@ -211,6 +263,7 @@ class Agent:
                     self.goto(goal=self.container_type)
                     return
                 elif self.holding_container:#already holding container
+                    self.goal_status = 'success' if self.container_type == goal else 'failure'
                     return
                 else:
                     interact_boxes:dict = locs[f'{goal} {self.container_id}']
@@ -220,23 +273,19 @@ class Agent:
                     else:
                         interact_box = locs[f'{goal} {self.container_id}']['interact_boxes']['SOUTH_BOX']
                         goal= self.interact_box_to_goal_location(box=interact_box)
+
             else:# access everything else from the SOUTH
                 interact_box = locs[goal]['interact_boxes']['SOUTH_BOX']
                 goal = self.interact_box_to_goal_location(box=interact_box)
 
-        if self.holding_container:
-            print(f"Agent {self.agent_id} going to location {goal} with {self.container_type}")
-            path = []
-            pass  # TODO: goto with cart. TA says it might be as simple as changing the player's shape as long as they are holding a cart and change it back once they are not. If it's too complicated we will skip it
-        else:
-            print(f"Agent {self.agent_id} planning a path to {goal} without cart")
-            path = self.planner.astar(
-                player_id=self.agent_id,
-                start=self.env['observation']['players'][self.agent_id]['position'],
-                goal=goal,
-                obs=self.env['observation']
-            )
-            print(f"Agent {self.agent_id} going to location {goal} without cart")
+        print(f"Agent {self.agent_id} planning a path to {goal} with container {self.container_type}")
+        path = self.planner.astar(
+            player_id=self.agent_id,
+            start=self.env['observation']['players'][self.agent_id]['position'],
+            goal=goal,
+            obs=self.env['observation']
+        )
+        print(f"Agent {self.agent_id} going to location {goal} with container {self.container_type}")
         
         for box_region in path:
             if box_region.name == "W_walkway" or box_region.name == "E_walkway":
@@ -303,6 +352,19 @@ class Agent:
        
         while True:
             player = self.env['observation']['players'][self.agent_id]
+            if self.holding_container and self.container_type == 'cart': # change player's shape to account for cart
+                cart = self.env['observation']['carts'][self.container_id]
+                player_cart = deepcopy(player)
+                if player_cart['direction'] == Direction.NORTH.name:
+                    player_cart['position'][1] -= cart['height'] # need to move the y of the player to the upper left of cart + player
+                    player_cart['height'] += cart['height']
+                elif player_cart['direction'] == Direction.SOUTH.name:
+                    player_cart['height'] += cart['height']
+                elif player_cart['direction'] == Direction.WEST.name:
+                    player_cart['position'][0] -= cart['width'] # need to move the x of the player to the upper left of cart + player
+                    player_cart['width'] += cart['width']
+                else:
+                    player_cart['width'][0] += cart['width'] 
 
             if is_box:
                 if isinstance(goal, BoxRegion):# it's a box region
@@ -315,7 +377,9 @@ class Agent:
                     goal_loc = self.interact_box_to_goal_location(box=goal)
                     x_dist = player['position'][0] - goal_loc[0]
                     y_dist = player['position'][1] - goal_loc[1]
-                    if can_interact_in_box(player=player, interact_box=goal):
+                    if not (self.holding_container and self.container_type == 'cart') and can_interact_in_box(player=player, interact_box=goal):
+                        break
+                    elif (self.holding_container and self.container_type == 'cart') and loc_in_box(loc=player['position'], box=goal): # we are holding a cart, it's good enough to be in the interaction box. We don't have to face the right direction
                         break
             else:
                 x_dist = player['position'][0] - goal[0]
@@ -329,7 +393,7 @@ class Agent:
                 if not is_box:
                     break
                 else: 
-                    if not isinstance(goal, BoxRegion): # it's an interact box, we have to face the right direction
+                    if not isinstance(goal, BoxRegion) and not (self.holding_container and self.container_type == 'cart'): # it's an interact box, we have to face the right direction
                         self.execute(goal['player_needs_to_face'].name)
                         reached_x = False # reset because we could have moved due to stochasticity
                         reached_y = False # reset because we could have moved due to stochasticity
@@ -358,12 +422,13 @@ class Agent:
 
             if self.holding_container and self.container_type == 'basket':
                 player['curr_basket'] = self.container_id # a hack. curr_basket isn't reflected in the env unlike curr_cart
+            if self.holding_container and self.container_type == 'cart':
+                player = player_cart # treat player and cart as one bigger object when projecting collision
             while project_collision(player, self.env, command, dist=STEP):
                 command = Direction(self._ninety_degrees(dir=command)) # take the 90 degrees action instead
                 stuck += 1
                 
-                if stuck >= 200: # been stuck for eternity, 
-                    #TODO: maybe call an A* with stepsize=0.15 to find a plan out of it?
+                if stuck >= 200: # been stuck for eternity, replan
                     self.goal_status = 'failure'
                     return # let the goto method replan
                 elif stuck >= 20:#been stuck for too long, it's probably a static corner some other agent created, F it, try a random action 
@@ -505,6 +570,10 @@ class Agent:
         self.socket.send(str.encode(action))  # send action to env
         output = recv_socket_data(self.socket)  # get observation from env
         self.env = json.loads(output)
+        # update all relevant observations
+        self.holding_food = self.env['observation']['players'][self.agent_id]['holding_food']
+        self.update_container('basket')
+        self.update_container('cart')
 
 
 if __name__ == "__main__":

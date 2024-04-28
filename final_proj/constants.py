@@ -1,6 +1,7 @@
 ###########################Helen: ################################################
 ##some constants that were useful during single agent norm-conforming navigation##
 ##################################################################################
+CORNER_OF_SOLITUDE = [18.1, 13.35]
 cartReturns = [2, 18.5]
 basketReturns = [3.5, 18.5]
 registerReturns_1 = [2, 4.5]
@@ -8,16 +9,6 @@ registerReturns_2 = [2, 9.5]
 exit_pos = [-0.6, 3.25]
 default_start_pos = [1.5, 15.6]
 interact_distance = 0.25
-counter = []
-loc = [1, 17.5]
-register_region_x = 1 + 2.25
-vertical_walkway_west_x = 4.2
-vertical_walkway_east_x = 17.1 # if east of this, walk west past it first
-west_east_walkway_y = 15
-west_region_x = 5.5
-east_region_x = 15.5
-isle_1 = [3.8, 3.2]
-isle_2 = []
 player_directions = {0:"NORTH", 1:"SOUTH", 2:"EAST", 3:"WEST"} # direction the player is facing
 left_cartReturns = {
             "height": 6,
