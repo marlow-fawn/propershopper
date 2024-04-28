@@ -475,7 +475,7 @@ class Agent:
             self.goal_status = 'success'
             # remove item from list
             self.shopping_list.remove(self.holding_food) 
-            self.goal = ""
+            self.goal = self.container_type
             return
         else:
             self.goal_status = 'failure'
