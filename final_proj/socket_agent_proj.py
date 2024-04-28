@@ -75,6 +75,7 @@ class Agent:
         self.list_quant:list = env['observation']['players'][self.agent_id]['list_quant']
         for item, quant in zip(env['observation']['players'][self.agent_id]['shopping_list'], self.list_quant):
             self.shopping_list += [item] * quant
+        self.shopping_list.reverse() # reverse the list so we don't go for the same item at the same time as other agents
         self.goal = ""
         self.goal_status = None # mainly for navigation and replanning
         self.done = False
