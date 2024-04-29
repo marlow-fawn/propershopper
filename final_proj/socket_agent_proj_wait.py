@@ -90,11 +90,12 @@ class Agent:
         if self.done:  # If we've left the store
             self.goal_status = 'pending'
             self.execute("NOP")  # Do nothing
-        elif self.goal == 'wait': # Wait in the corner of solitude for 100 steps. Hopefully the world will have become a better place 
+        elif self.goal == 'wait': # Wait in the corner of solitude. Hopefully the world will become a better place 
             self.goto(goal=CORNER_OF_SOLITUDE, is_item=False)
-            # wait for 100 time step
-            for _ in range(100):
+            
+            while len(self.env['observation']['players']) > 1: # wait for everyone to leave
                 self.execute('NOP')
+            self.goal = ''
         elif self.container_id == -1 or self.goal == 'cart' or self.goal == 'basket':  # If we don't have a container
             self.goal_status = 'pending'
             self.get_container()  # Get one!
@@ -622,8 +623,9 @@ if __name__ == "__main__":
     output = recv_socket_data(sock_game)  # get observation from env
     output = json.loads(output)
     locs = populate_locs(output['observation'])
-    agents = [Agent(sock_game, 0, env=output)]
+    agent = Agent(sock_game, 0, env=output)
+    agent.goal = 'wait' # wait for the world to become a better place
     # agents = [Agent(sock_game, 0), Agent(sock_game, 1), Agent(sock_game, 2)]
     while True:
-        for agent in agents:
-            agent.transition()
+
+        agent.transition()

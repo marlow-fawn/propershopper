@@ -130,7 +130,7 @@ def project_collision(obj:dict|list|tuple, state, direction: Direction, dist=0.4
         for i, item in enumerate(value):
             if key == 'players':#for players, pretend that they are wider and taller than they actually are to stay away
                 if (overlap(obj_copy['position'][0], obj_copy['position'][1], obj_copy['width'], obj_copy['height'],
-                            item['position'][0] - 1.0, item['position'][1] - 1.0, item['width'] + 2.0 + 2 * STEP, item['height'] + 2.0 + 2 * STEP)):
+                            item['position'][0] - 0.7, item['position'][1] - 0.7, item['width'] + 0.7 + 0.7, item['height'] + 0.7 + 0.7)):
                     if not (obj_copy == item or (
                         'index' in item.keys() and 'index' in obj_copy.keys() and item['index'] == obj_copy['index'])):
                     
