@@ -2,7 +2,7 @@
 ##some constants that were useful during single agent norm-conforming navigation##
 ##################################################################################
 CORNER_OF_SOLITUDE = [18.1, 22.65]
-CORNER_OF_SOLITUDE2 = [18.1, 23.65]
+CORNER_OF_SOLITUDE2 = [18.5, 23.65]
 cartReturns = [2, 18.5]
 basketReturns = [3.5, 18.5]
 registerReturns_1 = [2, 4.5]
