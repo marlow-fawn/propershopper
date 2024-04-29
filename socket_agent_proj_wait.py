@@ -1,18 +1,8 @@
-
-import json
-import socket
 import random
-from copy import deepcopy
-
-import pandas as pd
-import pathfind.graph.transform
 
 from enums.direction import Direction
-from final_proj.util import get_geometry
-from helper import project_collision
-from util import *
 from final_proj.fast_high_level_astar import *
-from box_regions import *
+from final_proj.box_regions import *
 
 
 def populate_locs(observation):
@@ -86,7 +76,6 @@ class Agent:
         self.planner = HighLevelPlanner(socket_game=conn, env=env)
 
     def transition(self):
-        self.execute(action='NOP') # this updates self.env
         if self.done:  # If we've left the store
             self.goal_status = 'pending'
             self.execute("NOP")  # Do nothing

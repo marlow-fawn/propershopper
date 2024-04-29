@@ -1,6 +1,4 @@
-import random
-from util import *
-# from functools import total_ordering
+from final_proj.util import *
 
 # @total_ordering
 class BoxRegion:

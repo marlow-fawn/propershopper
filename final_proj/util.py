@@ -2,9 +2,8 @@ import time
 import json
 import copy
 from pathlib import Path
-from constants import *
+from final_proj.constants import *
 from copy import deepcopy
-from constants import *
 from enums.direction import Direction
 from helper import *
 
