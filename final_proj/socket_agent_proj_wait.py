@@ -480,22 +480,6 @@ class Agent:
                 self.execute(action=command.name)
                 steps_taken += 1
   
-    def _opposite_dir(self, dir:Direction) -> Direction:
-        """Turn 180 degrees with respect to the given 
-
-        Args:
-            command (Direction): the direction command whose ninety degree direction we want to find
-        Returns:
-            returns the 90 degrees direction
-        """
-        if dir == Direction.NORTH:
-            return Direction.SOUTH
-        if dir == Direction.SOUTH:
-            return Direction.NORTH
-        if dir == Direction.EAST:
-            return Direction.WEST
-        else:
-            return Direction.EAST
 
     def _ninety_degrees(self, dir:Direction) -> Direction:
         """Find the command that's 90 degrees clockwise with respect to the given dir
@@ -510,41 +494,7 @@ class Agent:
             return Direction.SOUTH
         return turned_dir
 
-    
-    
-    def step(self, step_location:list|tuple, player_id:int, backtrack:list):
-        """Keep locally adjusting and stepping in the right direction so that `player` ends up `close_enough` to `step_location`. `step_location` should be only one step away
 
-        Args:
-            step_location (list | tuple): a (x, y) that is assumed to be one step away from the player's current location
-            player_id (int): the player id for the player that needs to be at `step_location`
-            backtrack (list): a list of locations visited by the player
-        """
-        goal_x, goal_y = step_location
-        player_x, player_y = self.env['observation']["players"][player_id]['position']
-        while not self.planner.is_close_enough(current=self.env['observation']["players"][player_id]['position'], goal=step_location, tolerance=LOCATION_TOLERANCE, is_item=False):#deals with stochasticity: keep locally adjusting to the right location until it's close enough
-            # compare previous position with current position to determine if a location needs to be saved in the player's backtracking trace 
-            prev_x = player_x
-            prev_y = player_y
-            player_x, player_y = self.env['observation']["players"][player_id]['position']
-            if player_x != prev_x or player_y != prev_y:#player has moved, record its prev position for potential backtracking
-                backtrack.append((prev_x, prev_y))
-
-            if manhattan_distance(self.env['observation']["players"][player_id]['position'], step_location) >= BACKTRACK_TOLERANCE:#player has wandered too far due to stochasticity, there could be an object between the player and the goal `step_location` now. The player needs to backtrack to the starting location, otherwise it could be banging its head against the object forever
-                self.step(step_location=backtrack[-1], player_id=player_id, backtrack=backtrack[:-1])
-                del backtrack[-1]
-            elif player_x < goal_x and abs(player_x - goal_x) >= LOCATION_TOLERANCE:# player should go EAST
-                #self.execute(Direction.EAST.name)
-                self.reactive_nav(goal=step_location, is_box=False)
-            elif player_x > goal_x and abs(player_x - goal_x) >= LOCATION_TOLERANCE:#player should go WEST
-                #self.execute(Direction.WEST.name)
-                self.reactive_nav(goal=step_location, is_box=False)
-            elif player_y < goal_y and abs(player_y - goal_y) >= LOCATION_TOLERANCE:#player should go SOUTH
-                #self.execute(Direction.SOUTH.name)
-                self.reactive_nav(goal=step_location, is_box=False)
-            elif player_y > goal_y and abs(player_y - goal_y) >= LOCATION_TOLERANCE:#player should go NORTH
-                #self.execute(Direction.NORTH.name)
-                self.reactive_nav(goal=step_location, is_box=False)
 
     # Agent picks up an item and adds it to the cart
     def add_to_container(self):
