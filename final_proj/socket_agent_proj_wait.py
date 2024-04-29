@@ -91,7 +91,7 @@ class Agent:
             self.goal_status = 'pending'
             self.execute("NOP")  # Do nothing
         elif self.goal == 'wait': # Wait in the corner of solitude. Hopefully the world will become a better place 
-            self.goto(goal=CORNER_OF_SOLITUDE, is_item=False)
+            self.goto(goal=CORNER_OF_SOLITUDE2, is_item=False)
             
             while len(self.env['observation']['players']) > 1: # wait for everyone to leave
                 self.execute('NOP')
