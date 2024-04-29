@@ -33,7 +33,7 @@ def recv_socket_data(sock):
 
 def manhattan_distance(pos1, pos2):
     # Calculate the Manhattan distance from pos1 to pos2
-    return abs(pos2[0] - pos1[0]) + abs(pos2[1] - pos2[1])
+    return abs(pos2[0] - pos1[0]) + abs(pos2[1] - pos1[1])
 
 def euclidean_distance(pos1, pos2):
     # Calculate Euclidean distance between two points
@@ -177,7 +177,7 @@ def can_interact_in_box(player, interact_box) -> bool:
         bool: Whether the player can interact in box
     """
     player['bounding_box'] = bounding_box(place=player)
-    if obj_overlap_with_box(obj=player, box=interact_box) and player['direction'] == interact_box['player_needs_to_face'].value:
+    if loc_in_box(loc=player['position'], box=interact_box) and player['direction'] == interact_box['player_needs_to_face'].value:
         return True
     return False
 

@@ -52,15 +52,15 @@ class BoxRegion:
         """
         closest_x = point[0]
         if point[0] < self.box['westmost']:
-            closest_x = self.box['westmost'] + STEP
+            closest_x = self.box['westmost'] + 4 * STEP
         elif point[0] > self.box['eastmost']:
-            closest_x = self.box['eastmost'] - STEP
+            closest_x = self.box['eastmost'] - 4 * STEP
 
         closest_y = point[1]
         if point[1] < self.box['northmost']:
-            closest_y = self.box['northmost'] + STEP
+            closest_y = self.box['northmost'] + 4 * STEP
         elif point[1] > self.box['southmost']:
-            closest_y = self.box['southmost'] - STEP
+            closest_y = self.box['southmost'] - 4 * STEP
 
         return closest_x, closest_y
 
@@ -97,13 +97,13 @@ SW_corner = BoxRegion(
         'westmost':-0.6,
         'eastmost':3.25,
         'northmost':12.0,
-        'southmost':25.0
+        'southmost':18.51
     }
 )
 NE_corner = BoxRegion(
     name = "NE_corner",
     box = {
-        'westmost':18.25,
+        'westmost':17.6,
         'eastmost':19.75,
         'northmost':1.5,
         'southmost':4.75
@@ -112,7 +112,7 @@ NE_corner = BoxRegion(
 E_corner = BoxRegion(
     name = "E_corner",
     box = {
-        'westmost':18.25,
+        'westmost':17.6,
         'eastmost':19.75,
         'northmost':7.0,
         'southmost':10.75
@@ -121,7 +121,7 @@ E_corner = BoxRegion(
 SE_corner = BoxRegion(
     name = "SE_corner",
     box = {
-        'westmost':18.25,
+        'westmost':17.6,
         'eastmost':19.75,
         'northmost':13.0,
         'southmost':25.0
@@ -187,7 +187,7 @@ W_walkway = BoxRegion(
     name = "W_walkway",
     box = {
         'westmost':3.25,
-        'eastmost':5.5,
+        'eastmost':5.49,
         'northmost':1.5,
         'southmost':25.0
     }
@@ -195,8 +195,8 @@ W_walkway = BoxRegion(
 E_walkway = BoxRegion(
     name = "E_walkway",
     box = {
-        'westmost':15.5,
-        'eastmost':18.25,
+        'westmost':15.51,
+        'eastmost':17.6,
         'northmost':1.5,
         'southmost':25.0
     }
