@@ -39,6 +39,17 @@ class BoxRegion:
         """
         return loc_in_box(box=self.box, loc=point)
     
+    def contains_obj(self, obj:dict) -> bool:
+        """Check whether an object is fully contained within this box region
+
+        Args:
+            obj (dict): obj with position, width and height
+
+        Returns:
+            bool: True if obj is fully contained
+        """
+        return obj_in_with_box(obj=obj, box=self.box)
+    
     def closest(self, point:list|tuple[float, float]) -> tuple|list[float, float]:
         """Return the closest point in the BoxRegion to the given point
 

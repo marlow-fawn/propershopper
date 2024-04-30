@@ -164,6 +164,15 @@ def obj_overlap_with_box(obj:dict, box:dict):
             obj['bounding_box']['southmost'] < box['northmost']
         )
 
+def obj_in_with_box(obj:dict, box:dict):
+   obj['bounding_box'] = bounding_box(place=obj)
+   return (
+            box['westmost'] <= obj['bounding_box']['westmost'] <= box['eastmost'] and \
+            box['westmost'] <= obj['bounding_box']['eastmost'] <= box['eastmost'] and \
+            box['northmost'] <= obj['bounding_box']['northmost'] <= box['southmost'] and \
+            box['northmost'] <= obj['bounding_box']['southmost'] <= box['southmost']
+        )
+
 
 def can_interact_in_box(player, interact_box) -> bool:
     """Returns whether `player` overlaps with interact_box
