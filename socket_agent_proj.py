@@ -587,8 +587,7 @@ if __name__ == "__main__":
     output = recv_socket_data(sock_game)  # get observation from env
     output = json.loads(output)
     locs = populate_locs(output['observation'])
-    agents = [Agent(sock_game, 0, env=output)]
-    # agents = [Agent(sock_game, 0,env=output), Agent(sock_game, 1,env=output), Agent(sock_game, 2,env=output)]
+    agents = [Agent(sock_game, 0,env=output)]
     while True:
         for agent in agents:
             agent.transition()
